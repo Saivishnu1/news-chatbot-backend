@@ -9,14 +9,25 @@ import os
 # Load environment variables
 load_dotenv()
 
-# Get frontend URL from environment variable, default to localhost for development
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+# Get frontend URLs - support both local and production
+FRONTEND_URLS = [
+    'http://localhost:5173',                            # Local development
+    'http://localhost:10000',                           # Local production
+    'https://news-chatbot-frontend.onrender.com',       # Render frontend
+    'https://news-chatbot-frontend.onrender.com'        # Render frontend (no trailing slash)
+]
+
+# Add custom frontend URL if specified
+custom_frontend_url = os.getenv('FRONTEND_URL')
+if custom_frontend_url:
+    FRONTEND_URLS.append(custom_frontend_url)
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],
+    allow_origins=FRONTEND_URLS,
+    allow_origin_regex=r'https://.*\.onrender\.com',  # Allow all Render subdomains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,7 +47,9 @@ async def startup_event():
         print("Gemini model initialized")
         
         # Ensure Qdrant collection exists
-        ensure_collection_exists()
+        if not ensure_collection_exists():
+            print("Failed to initialize Qdrant collection")
+            return
         print("Qdrant collection initialized")
         
         # Check if collection is empty
@@ -46,7 +59,8 @@ async def startup_event():
             
     except Exception as e:
         print(f"Error during startup: {str(e)}")
-        raise e
+        # Don't raise the error, just log it
+        print(f"Application will continue running with limited functionality")
 
 
 
@@ -59,5 +73,12 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv('PORT', 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    port = int(os.getenv('PORT', 10000))  # Default to port 10000 for Render
+    host = os.getenv('HOST', '0.0.0.0')    # Always bind to all interfaces
+    uvicorn.run(
+        app,
+        host=host,
+        port=port,
+        proxy_headers=True,          # Trust X-Forwarded-* headers
+        forwarded_allow_ips='*'      # Trust all forwarding IPs
+    )
