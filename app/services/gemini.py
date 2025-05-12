@@ -31,6 +31,7 @@ def initialize_gemini():
     global _gemini_model
     if _gemini_model is None:
         try:
+            generativeai.configure(api_key=GEMINI_API_KEY)
             _gemini_model = generativeai.GenerativeModel('models/gemini-2.0-flash')
             print("Gemini model initialized.")
         except Exception as e:
