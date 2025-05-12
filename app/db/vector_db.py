@@ -15,7 +15,7 @@ VECTOR_SIZE = int(os.getenv('VECTOR_SIZE'))
 client = QdrantClient(
     url=QDRANT_URL,
     api_key=QDRANT_API_KEY,
-    timeout=10.0  # Increase timeout
+    timeout=20.0  # Increase timeout further
 )
 
 def get_collection_info():
@@ -57,6 +57,36 @@ def get_collection_info():
         return None
 
 def ensure_collection_exists():
+    """Ensure Qdrant collection exists with proper configuration"""
+    try:
+        # Check if collection exists
+        collections = client.get_collections().collections
+        exists = any(c.name == QDRANT_COLLECTION_NAME for c in collections)
+        
+        if not exists:
+            # Create collection with proper configuration
+            client.create_collection(
+                collection_name=QDRANT_COLLECTION_NAME,
+                vectors_config={
+                    "size": VECTOR_SIZE,
+                    "distance": "Cosine"
+                },
+                optimizers_config={
+                    "default_segment_number": 2,
+                    "max_optimization_threads": 2
+                },
+                hnsw_config={
+                    "m": 16,
+                    "ef_construct": 100,
+                    "full_scan_threshold": 10000
+                }
+            )
+            print(f"Created collection {QDRANT_COLLECTION_NAME}")
+        else:
+            print(f"Collection {QDRANT_COLLECTION_NAME} already exists")
+    except Exception as e:
+        print(f"Error ensuring collection exists: {str(e)}")
+        raise
     try:
         # Check if collection exists first
         try:

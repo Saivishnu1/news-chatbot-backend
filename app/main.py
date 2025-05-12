@@ -73,12 +73,15 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv('PORT', 10000))  # Default to port 10000 for Render
-    host = os.getenv('HOST', '0.0.0.0')    # Always bind to all interfaces
+    import os
+    
+    # Get port from environment variable for Render deployment
+    port = int(os.getenv("PORT", 1000))
+    
+    # Bind to 0.0.0.0 for Render
     uvicorn.run(
         app,
-        host=host,
+        host="0.0.0.0",
         port=port,
-        proxy_headers=True,          # Trust X-Forwarded-* headers
         forwarded_allow_ips='*'      # Trust all forwarding IPs
     )
