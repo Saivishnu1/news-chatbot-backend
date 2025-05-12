@@ -58,42 +58,34 @@ def get_collection_info():
 
 def ensure_collection_exists():
     try:
-        # Check if collection exists
-        collection_info = client.get_collection(QDRANT_COLLECTION_NAME)
-        print(f"Collection info: {collection_info}")
-        
-        # Verify vector size matches
-        if collection_info.config.params.vectors.size != VECTOR_SIZE:
-            print(f"\nVector size mismatch detected:")
-            print(f"Collection vector size: {collection_info.config.params.vectors.size}")
-            print(f"Expected vector size: {VECTOR_SIZE}")
-            print("Recreating collection with correct vector size...")
-            
-            # Delete existing collection
-            client.delete_collection(QDRANT_COLLECTION_NAME)
-            print(f"Deleted collection {QDRANT_COLLECTION_NAME}")
-            
-            # Create new collection
-            client.create_collection(
-                collection_name=QDRANT_COLLECTION_NAME,
-                vectors_config=models.VectorParams(
-                    size=VECTOR_SIZE,
-                    distance=models.Distance.COSINE
-                )
-            )
-            print(f"Created new collection {QDRANT_COLLECTION_NAME} with vector size {VECTOR_SIZE}")
-            
-        return True
-    except Exception as e:
-        print(f"Creating new collection {QDRANT_COLLECTION_NAME}: {str(e)}")
+        # Try to get collection info first
+        try:
+            collection_info = client.get_collection(QDRANT_COLLECTION_NAME)
+            print(f"Collection exists with {collection_info.points_count} points")
+            return True
+        except Exception as e:
+            if 'Not Found' not in str(e):
+                print(f"Unexpected error checking collection: {str(e)}")
+                
+        # Collection doesn't exist, create it
+        print(f"Creating collection {QDRANT_COLLECTION_NAME}")
         client.create_collection(
             collection_name=QDRANT_COLLECTION_NAME,
             vectors_config=models.VectorParams(
                 size=VECTOR_SIZE,
                 distance=models.Distance.COSINE
-            )
+            ),
+            optimizers_config=models.OptimizersConfigDiff(
+                default_segment_number=2
+            ),
+            on_disk_payload=True
         )
+        print(f"Created collection {QDRANT_COLLECTION_NAME}")
         return True
+            
+    except Exception as e:
+        print(f"Error managing collection: {str(e)}")
+        raise e
 
 def insert_documents(documents):
     # Ensure collection exists before insertion
