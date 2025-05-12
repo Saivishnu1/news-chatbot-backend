@@ -2,7 +2,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 # Uncomment to ignore .env file
-#.env
+env
 venv/
 *.log
 .DS_Store
