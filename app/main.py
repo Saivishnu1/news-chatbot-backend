@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routes import chat, session
-from .services.gemini import initialize_gemini
-from .db.vector_db import ensure_collection_exists, get_collection_info
+from app.routes import chat, session
+from app.services.gemini import initialize_gemini
+from app.db.vector_db import ensure_collection_exists, get_collection_info
 from dotenv import load_dotenv
 import os
 
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     import os
     
     # Get port from environment variable for Render deployment
-    port = int(os.getenv("PORT", 1000))
+    port = int(os.getenv("PORT", 8000))
     
     # Bind to 0.0.0.0 for Render
     uvicorn.run(
