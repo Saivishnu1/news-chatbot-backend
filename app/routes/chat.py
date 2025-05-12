@@ -1,15 +1,19 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List, Dict, Optional
 
-from app.services.search import NewsSearchEngine
-from app.db.redis import RedisCache
+from ..services.search import search_articles
+from ..services.gemini import generate_final_answer
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 router = APIRouter()
 
 class ChatRequest(BaseModel):
-    query: str
-    session_id: str
+    message: str
+    session_id: Optional[str] = None
 
 class ChatResponse(BaseModel):
     answer: str
@@ -21,53 +25,45 @@ async def chat(request: ChatRequest):
     Process chat messages and generate AI-powered responses with news context
     """
     try:
-        # Initialize services
-        search_engine = NewsSearchEngine()
-        redis_cache = RedisCache()
-
-        # Search relevant news articles
-        news_results = search_engine.search_articles(request.query, top_k=3)
+        print(f"\nReceived chat request: {request.message}")
         
-        # Generate context-aware response
-        #response_text = generate_response(request.query, news_results)
-        response_text = generate_response(request.query, news_results)
+        # Search for relevant articles asynchronously
+        articles = await search_articles(request.message, top_k=5)
+        print(f"Found {len(articles)} relevant articles")
         
-        # Cache chat history
-        redis_cache.store_chat_history(
-            request.session_id, 
-            [{
-                "query": request.query, 
-                "response": response_text,
-                "news_context": news_results
-            }]
-        )
+        if not articles:
+            print("No relevant articles found")
+            return ChatResponse(
+                answer="I couldn't find any relevant news articles to answer your question.",
+                news_context=[]
+            )
+        
+        # Generate answer using Gemini
+        answer = generate_final_answer(request.message, articles)
+        if not answer:
+            print("No answer generated")
+            return ChatResponse(
+                answer="I apologize, but I couldn't generate a response based on the available information.",
+                news_context=[]
+            )
+        
+        # Format news context for response
+        news_context = []
+        for article in articles:
+            try:
+                news_context.append({
+                    "title": str(article.get("title", "No title")),
+                    "content": str(article.get("content", "No content")),
+                    "url": str(article.get("url", "")),
+                    "relevance_score": float(article.get("score", 0.0))
+                })
+            except Exception as e:
+                print(f"Error formatting article: {str(e)}")
+                continue
         
         return ChatResponse(
-            answer=response_text, 
-            news_context=news_results
+            answer=answer,
+            news_context=news_context
         )
-    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-def generate_response(query: str, news_context: List[Dict]) -> str:
-    """Generate an intelligent response using query and news context"""
-    # Simple implementation for now
-    if not news_context:
-        return "I couldn't find any relevant news for your query."
-    
-    # Simple response generation logic
-    response_templates = [
-        "Based on recent news, ",
-        "Considering the latest developments, ",
-        "Here's what I found: "
-    ]
-    
-    # Select a random response template
-    template = response_templates[hash(query) % len(response_templates)]
-    
-    # Compile news titles
-    news_titles = [article.get('title', '') for article in news_context]
-    context_summary = " | ".join(news_titles)
-    
-    return f"{template}{context_summary}"

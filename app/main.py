@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import chat, session
+from .routes import chat, session
+from .services.gemini import initialize_gemini
+from .db.vector_db import ensure_collection_exists, get_collection_info
 
 app = FastAPI()
 
@@ -15,10 +17,35 @@ app.add_middleware(
 app.include_router(session.router, prefix="/api/session", tags=["session"])
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup"""
+    print("Starting application...")
+    
+    try:
+        # Initialize Gemini model
+        initialize_gemini()
+        print("Gemini model initialized")
+        
+        # Ensure Qdrant collection exists
+        ensure_collection_exists()
+        print("Qdrant collection initialized")
+        
+        # Check if collection is empty
+        collection_info = get_collection_info()
+        if collection_info:
+            print(f"Collection has {collection_info.get('points_count', 0)} points")
+            
+    except Exception as e:
+        print(f"Error during startup: {str(e)}")
+        raise e
+
+
+
 @app.get("/")
 async def root():
     return {
-        "status": "healthy", 
+        "status": "healthy",
         "message": "News Chatbot Backend is running"
     }
 
