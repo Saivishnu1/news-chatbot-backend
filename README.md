@@ -380,6 +380,140 @@ User Request → Redis Cache Check → PostgreSQL Fallback → Response
    - Fallback to PostgreSQL on Redis errors
    - Automatic cache reconstruction
 
+## Code Walkthrough
+
+### 1. End-to-End Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant B as Backend
+    participant G as Gemini AI
+    participant Q as Qdrant
+    participant R as Redis
+    participant P as PostgreSQL
+
+    U->>F: Enter question
+    F->>B: POST /api/chat
+    B->>Q: Search similar articles
+    Q-->>B: Return relevant articles
+    B->>G: Generate response
+    G-->>B: Return answer
+    B->>R: Cache response
+    B->>P: Store in history
+    B-->>F: Return response
+    F-->>U: Display answer
+```
+
+### 2. Frontend Implementation
+
+```typescript
+// ChatContainer.tsx
+const handleSendMessage = async (message: string) => {
+  setIsTyping(true);
+  try {
+    const response = await fetch(`${API_URL}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        message,
+        session_id: sessionId 
+      })
+    });
+    const data = await response.json();
+    updateMessages(data.answer, data.news_context);
+  } catch (error) {
+    handleError(error);
+  }
+  setIsTyping(false);
+};
+```
+
+### 3. Backend Pipeline
+
+1. **Chat Request Processing**:
+```python
+@router.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
+    # 1. Search relevant articles
+    articles = await search_articles(request.message, top_k=5)
+    
+    # 2. Generate AI response
+    answer = generate_final_answer(request.message, articles)
+    
+    # 3. Save to session history
+    save_chat_message(request.session_id, "user", request.message)
+    save_chat_message(request.session_id, "assistant", answer)
+```
+
+2. **Vector Search Process**:
+```python
+# 1. Generate query embedding
+query_vector = generate_query_embedding(query)
+
+# 2. Search in Qdrant
+results = client.search(
+    collection_name=COLLECTION_NAME,
+    query_vector=query_vector,
+    limit=top_k
+)
+
+# 3. Format and return matches
+return [format_article(match) for match in results]
+```
+
+3. **Session Management**:
+```python
+# Redis-first with PostgreSQL fallback
+def get_chat_history(session_id: str):
+    # Try Redis first
+    messages = get_messages_from_redis(session_id)
+    if messages:
+        return messages
+        
+    # Fallback to PostgreSQL
+    messages = get_messages_from_db(session_id)
+    if messages:
+        # Update Redis cache
+        set_messages_in_redis(session_id, messages)
+    return messages
+```
+
+### 4. Key Design Decisions
+
+1. **Hybrid Storage Strategy**
+   - Redis for fast access to recent sessions
+   - PostgreSQL for permanent storage
+   - Automatic sync between both
+
+2. **Vector Search Optimization**
+   - HNSW index for fast similarity search
+   - Batch processing for embeddings
+   - Caching frequent queries
+
+3. **Error Handling**
+   - Graceful degradation
+   - Automatic retries
+   - Fallback responses
+
+### 5. Potential Improvements
+
+1. **Performance**
+   - Implement websockets for real-time updates
+   - Add query result caching
+   - Optimize embedding generation
+
+2. **Features**
+   - Multi-language support
+   - User preferences
+   - Source filtering
+
+3. **Infrastructure**
+   - Load balancing
+   - Rate limiting
+   - Analytics tracking
+
 ## Testing
 ```bash
 pytest tests/
