@@ -58,34 +58,48 @@ def get_collection_info():
 
 def ensure_collection_exists():
     try:
-        # Try to get collection info first
+        # Check if collection exists first
         try:
             collection_info = client.get_collection(QDRANT_COLLECTION_NAME)
-            print(f"Collection exists with {collection_info.points_count} points")
+            print(f"Collection already exists with {collection_info.points_count} points")
             return True
         except Exception as e:
+            # Only proceed to create if collection doesn't exist
             if 'Not Found' not in str(e):
-                print(f"Unexpected error checking collection: {str(e)}")
-                
+                print(f"Error checking collection: {str(e)}")
+                return False
+            
         # Collection doesn't exist, create it
-        print(f"Creating collection {QDRANT_COLLECTION_NAME}")
-        client.create_collection(
-            collection_name=QDRANT_COLLECTION_NAME,
-            vectors_config=models.VectorParams(
-                size=VECTOR_SIZE,
-                distance=models.Distance.COSINE
-            ),
-            optimizers_config=models.OptimizersConfigDiff(
-                default_segment_number=2
-            ),
-            on_disk_payload=True
-        )
-        print(f"Created collection {QDRANT_COLLECTION_NAME}")
-        return True
+        print(f"Creating new collection {QDRANT_COLLECTION_NAME}")
+        try:
+            client.create_collection(
+                collection_name=QDRANT_COLLECTION_NAME,
+                vectors_config=models.VectorParams(
+                    size=VECTOR_SIZE,
+                    distance=models.Distance.COSINE
+                ),
+                hnsw_config=models.HnswConfigDiff(
+                    m=16,
+                    ef_construct=100
+                ),
+                optimizers_config=models.OptimizersConfigDiff(
+                    default_segment_number=2,
+                    indexing_threshold=0,
+                    memmap_threshold=0
+                ),
+                on_disk_payload=True
+            )
+            print(f"Successfully created collection {QDRANT_COLLECTION_NAME}")
+            return True
+        except Exception as create_error:
+            if 'already exists' in str(create_error):
+                print(f"Collection {QDRANT_COLLECTION_NAME} already exists (concurrent creation)")
+                return True
+            raise create_error
             
     except Exception as e:
-        print(f"Error managing collection: {str(e)}")
-        raise e
+        print(f"Fatal error managing collection: {str(e)}")
+        return False
 
 def insert_documents(documents):
     # Ensure collection exists before insertion
