@@ -3,12 +3,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routes import chat, session
 from .services.gemini import initialize_gemini
 from .db.vector_db import ensure_collection_exists, get_collection_info
+from dotenv import load_dotenv
+import os
+
+# Load environment variables
+load_dotenv()
+
+# Get frontend URL from environment variable, default to localhost for development
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

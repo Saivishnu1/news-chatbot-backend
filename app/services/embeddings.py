@@ -1,6 +1,12 @@
 import json
 import requests
-from .. import config  # Assuming config.py is in the parent directory
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+JINA_API_KEY = os.getenv('JINA_API_KEY')
+
 
 def generate_embeddings(texts, task="retrieval.document"):
     """Generate embeddings for documents. Uses document task type for better chunking."""
@@ -63,18 +69,18 @@ def _generate_embeddings(texts, task):
     
     print(f"Processing {len(texts)} documents for embedding generation")
     
-    if not config.JINA_API_KEY:
+    if not JINA_API_KEY:
         print("Error: JINA_API_KEY not found in environment variables")
         print("Available environment variables:")
         # Attempt to print the key, but mask it for security
-        masked_key = '*' * len(config.JINA_API_KEY) if hasattr(config, 'JINA_API_KEY') and config.JINA_API_KEY else 'Not set'
+        masked_key = '*' * len(JINA_API_KEY) if hasattr(JINA_API_KEY, 'JINA_API_KEY') and JINA_API_KEY else 'Not set'
         print(f"JINA_API_KEY: {masked_key}")
         return []
 
     url = "https://api.jina.ai/v1/embeddings"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {config.JINA_API_KEY}"
+        "Authorization": f"Bearer {JINA_API_KEY}"
     }
     
     try:

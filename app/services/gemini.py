@@ -1,6 +1,11 @@
 from google import generativeai
-from .. import config
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
+
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+    
 # Global variable to store the initialized Gemini model
 _gemini_model = None
 

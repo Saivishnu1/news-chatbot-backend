@@ -13,9 +13,9 @@ import os
 load_dotenv()
 
 redis_client = redis.Redis(
-    host=os.getenv('REDIS_HOST', 'localhost'),
-    port=int(os.getenv('REDIS_PORT', '6379')),
-    db=int(os.getenv('REDIS_DB', '0')),
+    host=os.getenv('REDIS_HOST', 'redis-17265.c212.ap-south-1-1.ec2.redns.redis-cloud.com'),
+    port=int(os.getenv('REDIS_PORT', '17265')),
+    db=os.getenv('REDIS_DB', 'default'),
     password=os.getenv('REDIS_PASSWORD'),
     decode_responses=True
 )
