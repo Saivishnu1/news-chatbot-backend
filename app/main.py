@@ -36,6 +36,11 @@ app.add_middleware(
 app.include_router(session.router, prefix="/api/session", tags=["session"])
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 
+@app.get("/ping")
+async def ping():
+    """Endpoint to check if backend is awake"""
+    return {"status": "ok", "message": "Backend is awake"}
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup"""
