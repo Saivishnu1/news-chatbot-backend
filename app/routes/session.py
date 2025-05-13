@@ -34,7 +34,8 @@ def get_messages_from_redis(session_id: str) -> List[dict]:
     try:
         messages_str = redis_client.get(f'chat:{session_id}')
         if messages_str:
-            return json.loads(messages_str.decode('utf-8'))
+            # No need to decode since decode_responses=True
+            return json.loads(messages_str)
         return []
     except Exception as e:
         print(f"Redis error: {e}")
@@ -42,10 +43,15 @@ def get_messages_from_redis(session_id: str) -> List[dict]:
 
 def set_messages_in_redis(session_id: str, messages: List[dict], expire_time: int = 3600) -> None:
     try:
+        # Convert messages to a format that can be serialized
+        serializable_messages = [
+            {"role": msg["role"], "content": msg["content"]} 
+            for msg in messages
+        ]
         redis_client.setex(
             f'chat:{session_id}',
             expire_time,
-            json.dumps(messages)
+            json.dumps(serializable_messages)
         )
     except Exception as e:
         print(f"Redis error: {e}")
