@@ -56,12 +56,31 @@ def generate_final_answer(query: str, news_context: list):
         )
         
         # Construct the prompt
-        prompt = f"""Based on the following news articles, answer this question: {query}
+        prompt = f"""Based on the following news articles, provide a structured response to this question: {query}
 
 Context from news articles:
 {context_str}
 
-Please provide a comprehensive answer based on the provided news articles. If the articles don't contain relevant information to answer the question, please indicate that."""
+Please format your response in the following structure:
+
+# [Main Topic]
+
+## Key Points:
+1. [First key point]
+   - [Sub-point if needed]
+   - [Sub-point if needed]
+
+2. [Second key point]
+   - [Sub-point if needed]
+
+## Additional Information:
+- [Any additional relevant details]
+
+Make sure to:
+1. Use clear headings and subheadings
+2. Organize information logically
+3. Only include information relevant to the question
+4. If there's no relevant information, clearly state that"""
         
         # Generate response
         print("Generating response from Gemini...")
