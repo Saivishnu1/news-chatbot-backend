@@ -3,6 +3,13 @@
 ## Overview
 A FastAPI-powered backend for an intelligent news chatbot that combines RAG (Retrieval Augmented Generation) with Google's Gemini model. The system provides context-aware responses by retrieving relevant news articles and using them to generate accurate, informative answers.
 
+## Hosted Webservice URLs:-
+
+ Back-End : [news-chatbot-backend.onrender.com](https://news-chatbot-backend.onrender.com/)
+ Front-End : [https://news-chatbot-frontend.onrender.com/](https://news-chatbot-frontend.onrender.com/)
+ 
+ **Note**:- The hosted server might be sleeping due to inactivity. It needs 30-60 seconds to start running.
+
 ## Features
 - 🤖 **AI-Powered Responses**: Uses Google Gemini for natural language understanding and generation
 - 🔍 **Smart Search**: Vector-based semantic search using Qdrant for finding relevant news articles
